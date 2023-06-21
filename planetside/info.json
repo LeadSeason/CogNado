@@ -1,0 +1,20 @@
+{
+    "author": [
+        "LeadSeason (leadseason)"
+    ],
+    "install": "Various planetside related slash commands.\nTo set service id use '[p]setserviceid <You service id>'. You can get your own from https://census.daybreakgames.com/#devSignup \nMake sure to enable slash commands with '[p]slash enablecog planetside'",
+    "name": "CogNado",
+    "short": "CogNado 🌪️⚙🌪️⚙🌪️⚙🌪️",
+    "description": "Various planetside related slash commands",
+    "tags": [
+        "planetside",
+        "ps2",
+        "ps",
+        "census"
+    ],
+    "requirements": [
+        "auraxium"
+    ],
+    "hidden": false,
+    "end_user_data_statement": "This cog only currently stores Census serviceID. This might change in the future."
+}
