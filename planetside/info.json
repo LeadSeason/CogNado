@@ -16,5 +16,5 @@
         "auraxium"
     ],
     "hidden": false,
-    "end_user_data_statement": "This cog only currently stores Census serviceID. This might change in the future."
+    "end_user_data_statement": "This cog uses thirdparty services, only currently stores Census serviceID. This might change in the future."
 }
