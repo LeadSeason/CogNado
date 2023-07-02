@@ -48,7 +48,7 @@ IMPLANTS = {
         "image": "89583"
     },
     "Avoidance [Perfect]": {
-        "desc": "Your movements no longer trigger anti-infantry mines, and you are no longer targeted by Spitfire turrets.<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "Your movements no longer trigger anti-infantry mines, and you are no longer targeted by Spitfire turrets.\n\n**Perfect implants cannot be broken down.**",
         "image": "94914"
     },
     "Battle Hardened": {
@@ -64,7 +64,7 @@ IMPLANTS = {
         "image": "94270"
     },
     "Berserker [Perfect]": {
-        "desc": "You regenerate 40 health per second and your armor is reduced by 20%. Taking damage pauses this regeneration for 2 seconds, and regeneration does not stack with Nanite Auto-Repair. **MAX only.**<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "You regenerate 40 health per second and your armor is reduced by 20%. Taking damage pauses this regeneration for 2 seconds, and regeneration does not stack with Nanite Auto-Repair. **MAX only.**\n\n**Perfect implants cannot be broken down.**",
         "image": "95699"
     },
     "Bionics": {
@@ -72,7 +72,7 @@ IMPLANTS = {
         "image": "89604"
     },
     "Bionics [Perfect]": {
-        "desc": "Your personal shield health is increased by 400, and 400 health is removed from your health pool.<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "Your personal shield health is increased by 400, and 400 health is removed from your health pool.\n\n**Perfect implants cannot be broken down.**",
         "image": "92204"
     },
     "Carapace": {
@@ -80,7 +80,7 @@ IMPLANTS = {
         "image": "88039"
     },
     "Carapace [Perfect]": {
-        "desc": "Your personal shield is removed and replaced with 500 additional health. Equipment that adds or modifies shield health does not stack with this implant.<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "Your personal shield is removed and replaced with 500 additional health. Equipment that adds or modifies shield health does not stack with this implant.\n\n**Perfect implants cannot be broken down.**",
         "image": "92207"
     },
     "Catlike": {
@@ -108,7 +108,7 @@ IMPLANTS = {
         "image": "87521"
     },
     "Counter-Intelligence [Perfect]": {
-        "desc": "You automatically spot targets who damage you, and while not inside a vehicle, you are also notified on the HUD when spotted by an enemy.** Works in vehicles. MAX units can equip.**<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "You automatically spot targets who damage you, and while not inside a vehicle, you are also notified on the HUD when spotted by an enemy.** Works in vehicles. MAX units can equip.**\n\n**Perfect implants cannot be broken down.**",
         "image": "92210"
     },
     "Countershade": {
@@ -156,7 +156,7 @@ IMPLANTS = {
         "image": "87717"
     },
     "Experimental Stims [Perfect]": {
-        "desc": "Passively increases the carry capacity of all stims by 1, and using a stim will provide 12 seconds of another rank 5 implant's benefits. The implant chosen is random from this list: Safe Fall, Vampire, Battle Hardened, Heavyweight, Response Jacket. Experimental Stims only triggers when there is no active benefit.<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "Passively increases the carry capacity of all stims by 1, and using a stim will provide 12 seconds of another rank 5 implant's benefits. The implant chosen is random from this list: Safe Fall, Vampire, Battle Hardened, Heavyweight, Response Jacket. Experimental Stims only triggers when there is no active benefit.\n\n**Perfect implants cannot be broken down.**",
         "image": "95702"
     },
     "Failsafe": {
@@ -208,7 +208,7 @@ IMPLANTS = {
         "image": "87774"
     },
     "Infravision [Perfect]": {
-        "desc": "While equipped, the player will highlight infantry and vehicles within 125 meters, while reducing vision at long range. **MAX units can equip. Does not work in vehicles.**<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "While equipped, the player will highlight infantry and vehicles within 125 meters, while reducing vision at long range. **MAX units can equip. Does not work in vehicles.**\n\n**Perfect implants cannot be broken down.**",
         "image": "94908"
     },
     "Jockey": {
@@ -236,7 +236,7 @@ IMPLANTS = {
         "image": "87503"
     },
     "Minor Cloak [Perfect]": {
-        "desc": "Remaining stationary for 8 seconds will cloak the user. Movement will break this cloak, though short bouts of movement will let you return to cloak more quickly after breaking it. Firing a weapon will reset the 8 second recharge countdown.<br><br>**Perfect implants cannot be broken down.**",
+        "desc": "Remaining stationary for 8 seconds will cloak the user. Movement will break this cloak, though short bouts of movement will let you return to cloak more quickly after breaking it. Firing a weapon will reset the 8 second recharge countdown.\n\n**Perfect implants cannot be broken down.**",
         "image": "94911"
     },
     "Mobility Mesh": {
