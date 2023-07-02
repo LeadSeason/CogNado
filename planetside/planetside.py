@@ -6,6 +6,9 @@ import aiohttp
 import discord
 from redbot.core import Config, app_commands, commands
 
+# import fuzzysearch
+
+from .static.implants import IMPLANTS
 from .static.weapons import WEAPONS
 
 
@@ -126,12 +129,10 @@ class Planetside(commands.Cog):
                             responseJson.pop(index)
 
                 char.characterID = responseJson[0]["id"]
-                charName = responseJson[0]["name"]
                 # If exact name found use instead of the last online
                 for x in responseJson:
                     if x["name"].lower() == username:
                         char.characterID = x["id"]
-                        charName = x["name"]
 
             # @TODO Make happen all at the same time not one by one
             async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}") as response:
@@ -263,3 +264,53 @@ class Planetside(commands.Cog):
         embed.set_footer(text=f"Process time: {round(time() - startTime, 2)} seconds.", icon_url="https://cdn.tims.host/2/ucsQnspf70JR7FQ.png")
 
         await interaction.edit_original_response(embed=embed)
+
+    @app_commands.command()
+    @app_commands.describe(query="Lookup an implant")
+    async def implant(self, interaction: discord.Interaction, query: str):
+        if query not in IMPLANTS:
+            searchQuery = [x for x in IMPLANTS.keys() if query.lower() in x.lower()]
+            if 0 >= len(searchQuery):
+                await interaction.response.send_message(
+                    discord.Embed(
+                        title=f"Failed to find implant \"{query}\", Use autocomplete if possible",
+                        color=0xed333b
+                    )
+                )
+                return
+            else:
+                query = searchQuery[0]
+
+        implant = IMPLANTS[query]
+        embed = discord.Embed(title=query,)
+
+        if "desc" in implant.keys():
+            embed.add_field(name="Description", value=implant["desc"], inline=False)
+        elif "1" in implant.keys():
+            embed.add_field(name="Rank 1", value=implant["1"], inline=False)
+            embed.add_field(name="Rank 2", value=implant["2"], inline=False)
+            embed.add_field(name="Rank 3", value=implant["3"], inline=False)
+            embed.add_field(name="Rank 4", value=implant["4"], inline=False)
+            embed.add_field(name="Rank 5", value=implant["5"], inline=False)
+        else:
+            embed.add_field(name="Lookup failed", value=f"Selected implant \"{query}\" has no in it")
+
+        if "image" in implant.keys():
+            embed.set_thumbnail(url=f"http://census.daybreakgames.com/files/ps2/images/static/{implant['image']}.png")
+
+        await interaction.response.send_message(embed=embed)
+
+    @implant.autocomplete('query')
+    async def implant_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        if current == "":
+            return [app_commands.Choice(name=x, value=x) for x in IMPLANTS.keys()][:25]
+
+        implants = IMPLANTS.keys()
+        return [
+            app_commands.Choice(name=x, value=x)
+            for x in implants if current.lower() in x.lower()
+        ][:25]
