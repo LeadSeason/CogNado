@@ -6,10 +6,9 @@ import aiohttp
 import discord
 from redbot.core import Config, app_commands, commands
 
-# import fuzzysearch
-
+from .static.utils import FACTIONS, SERVER_IDS, CLASSES
 from .static.implants import IMPLANTS
-from .static.weapons import WEAPONS
+from .static.weapons import WEAPONS, WEAPON_NAMES
 
 
 class Player():
@@ -21,73 +20,6 @@ class Player():
         self.honuData = dict()
         self.honuMeta = dict()
         self.weaponStats = dict()
-
-
-# @TODO Use indexed dict
-FACTIONS = [
-    {
-        # Yeah I know is a dumb solution but hey it works
-        "tag": None,
-        "name": None,
-        "color": 0x000000,
-        "emoji": None
-    },
-    {
-        "tag": "VS",
-        "name": "Vanu Sovereignty",
-        "color": 0xc061cb,
-        "emoji": "<:vs:441405448113881098>"
-    },
-    {
-        "tag": "NC",
-        "name": "New Conglomerate",
-        "color": 0x62a0ea,
-        "emoji": "<:nc:441405432091901972>"
-    },
-    {
-        "tag": "TR",
-        "name": "Terran Republic",
-        "color": 0xed333b,
-        "emoji": "<:tr:1104394643145232395>"
-    },
-    {
-        "tag": "NSO",
-        "name": "Nanite Systems Operatives",
-        "color": 0x777777,
-        "emoji": "<:nso:938862172522573904>"
-    }
-]
-
-CLASSES = {
-    1: "Infiltrator",
-    3: "Light Assault",
-    4: "Combat Medic",
-    5: "Engineer",
-    6: "Heavy Assault",
-    7: "MAX"
-}
-
-SERVERS = [
-    "connery",
-    "miller",
-    "cobalt",
-    "emerald",
-    "jaeger",
-    "soltech",
-    "genudine",
-    "ceres"
-]
-
-SERVER_IDS = {
-    1: "Connery",
-    10: "Miller",
-    13: "Cobalt",
-    17: "Emerald",
-    19: "Jaeger",
-    40: "SolTech",
-    1000: "Genudine",
-    2000: "Ceres"
-}
 
 
 class Planetside(commands.Cog):
@@ -199,7 +131,7 @@ class Planetside(commands.Cog):
         embed = discord.Embed(
             title=f"{onlineIcon} {factionEmoji} {outfitTag}{char.character['name']}",
             description=f"""Of {serverName}'s {factionName}
-                            Battle rank {char.character['battleRank']}{prestige}""",
+Battle rank {char.character['battleRank']}{prestige}""",
             color=factionColor
         )
 
@@ -243,9 +175,9 @@ class Planetside(commands.Cog):
 
         embed.add_field(name="K-D ", value=f'{"{:,}".format(totalKills)} - {"{:,}".format(totalDeaths)} = {"{:,}".format(totalKills - totalDeaths)}')
         embed.add_field(name="KDR", value=f"{round(await self.division(totalKills, totalDeaths), 2)}")
-        embed.add_field(name="KPM", value=f"{round(totalKills / totalPlatTimeMinutes, 2)}")
+        embed.add_field(name="KPM", value=f"{round(await self.division(totalKills, totalPlatTimeMinutes), 2)}")
 
-        embed.add_field(name="Score (SPM)", value=f'{"{:,}".format(totalScore)} ({round(totalScore / totalPlatTimeMinutes, 1)})')
+        embed.add_field(name="Score (SPM)", value=f'{"{:,}".format(totalScore)} ({round(await self.division(totalScore, totalPlatTimeMinutes), 1)})')
 
         if mostKillsWeaponID in WEAPONS:
             weaponName = WEAPONS[mostKillsWeaponID]["name"]
@@ -266,23 +198,23 @@ class Planetside(commands.Cog):
         await interaction.edit_original_response(embed=embed)
 
     @app_commands.command()
-    @app_commands.describe(query="Lookup an implant")
-    async def implant(self, interaction: discord.Interaction, query: str):
-        if query not in IMPLANTS:
-            searchQuery = [x for x in IMPLANTS.keys() if query.lower() in x.lower()]
+    @app_commands.describe(implant="Lookup an implant")
+    async def implant(self, interaction: discord.Interaction, implant: str):
+        if implant not in IMPLANTS:
+            searchQuery = [x for x in IMPLANTS.keys() if implant.lower() in x.lower()]
             if 0 >= len(searchQuery):
                 await interaction.response.send_message(
                     discord.Embed(
-                        title=f"Failed to find implant \"{query}\", Use autocomplete if possible",
+                        title=f"Failed to find implant \"{implant}\", Use autocomplete if possible",
                         color=0xed333b
                     )
                 )
                 return
             else:
-                query = searchQuery[0]
+                implant = searchQuery[0]
 
-        implant = IMPLANTS[query]
-        embed = discord.Embed(title=query,)
+        implant = IMPLANTS[implant]
+        embed = discord.Embed(title=implant)
 
         if "desc" in implant.keys():
             embed.add_field(name="Description", value=implant["desc"], inline=False)
@@ -293,24 +225,157 @@ class Planetside(commands.Cog):
             embed.add_field(name="Rank 4", value=implant["4"], inline=False)
             embed.add_field(name="Rank 5", value=implant["5"], inline=False)
         else:
-            embed.add_field(name="Lookup failed", value=f"Selected implant \"{query}\" has no in it")
+            embed.add_field(name="Lookup failed", value=f"Selected implant \"{implant}\" has data no in it")
 
         if "image" in implant.keys():
             embed.set_thumbnail(url=f"http://census.daybreakgames.com/files/ps2/images/static/{implant['image']}.png")
 
         await interaction.response.send_message(embed=embed)
 
-    @implant.autocomplete('query')
-    async def implant_autocomplete(
-        self,
-        interaction: discord.Interaction,
-        current: str,
-    ) -> list[app_commands.Choice[str]]:
+    @implant.autocomplete('implant')
+    async def implant_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         if current == "":
             return [app_commands.Choice(name=x, value=x) for x in IMPLANTS.keys()][:25]
 
-        implants = IMPLANTS.keys()
-        return [
-            app_commands.Choice(name=x, value=x)
-            for x in implants if current.lower() in x.lower()
-        ][:25]
+        return [app_commands.Choice(name=x, value=x) for x in IMPLANTS.keys() if current.lower() in x.lower()][:25]
+
+    @app_commands.command()
+    @app_commands.describe(weapon="Lookup an weapon")
+    async def weapon(self, interaction: discord.Interaction, weapon: str):
+        try:
+            weaponObj = WEAPONS[int(weapon)]
+        except ValueError:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title=f"Failed to find Weapon. WeaponID: \"{weapon}\", Use autocomplete if possible",
+                    color=0xed333b
+                )
+            )
+            return
+
+        """
+        embed = discord.Embed(
+            title=weaponObj["name"],
+            description=f"```json\n{pprint.pformat(weaponObj, indent=2, width=55)}```"
+        )
+
+        await interaction.response.send_message(embed=embed)
+        return
+        """
+
+        embed = discord.Embed(
+            title=weaponObj["name"],
+            description=weaponObj["description"]
+        )
+        embed.set_footer(text=f"Weapon ID: {weapon}")
+
+        if weaponObj["image_id"] != -1:
+            embed.set_thumbnail(url=f"http://census.daybreakgames.com/files/ps2/images/static/{weaponObj['image_id']}.png")
+
+        if "category" in weaponObj:
+            embed.add_field(name="Category", value=weaponObj["category"])
+
+        if "fireRate" in weaponObj:
+            embed.add_field(name="Firerate", value="{} RPM".format(int(60 * (1000 / weaponObj['fireRate']))))
+
+        if "heatCapacity" in weaponObj:
+            embed.add_field(name="Heat capacity", value="{}".format(weaponObj["heatCapacity"]))
+            embed.add_field(name="Heat per shot", value="{}".format(weaponObj["heatPerShot"]))
+            embed.add_field(name="Heat bleed off", value="{}/s".format(weaponObj["heatBleedOff"]))
+            embed.add_field(
+                name="Recovery delay",
+                value=f"""{weaponObj['heatRecoveryDelay']/1000}s
+                          {(weaponObj['overheatPenalty'] + weaponObj['heatRecoveryDelay'])/1000} s OverHeat"""
+            )
+        elif "clip" in weaponObj:
+            if "ammo" in weaponObj:
+                embed.add_field(
+                    name="Ammo",
+                    value=f"""Magazine: {weaponObj["clip"]}
+Capacity: {weaponObj["ammo"]}
+                    """
+                )
+            else:
+                embed.add_field(
+                    name="Ammo",
+                    value=f"""Magazine: {weaponObj["clip"]}"""
+                )
+
+            if "reload" in weaponObj:
+                if "chamber" in weaponObj:
+                    embed.add_field(
+                        name="Reload",
+                        value=f"""Short: {weaponObj["reload"]/1000} s
+Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
+                        """
+                    )
+                else:
+                    embed.add_field(
+                        name="Reload",
+                        value=f"""Reload: {weaponObj["reload"]/1000} s
+                        """
+                    )
+        elif "reload" in weaponObj:
+            embed.add_field(
+                name="Reload",
+                value=f"""Reload: {weaponObj["reload"]/1000} s"""
+            )
+
+        if "maxDamage" in weaponObj:
+            if "directDamage" in weaponObj:
+                if weaponObj["maxDamage"] != weaponObj["directDamage"]:
+                    embed.add_field(
+                        name="Damage",
+                        value=f"""{weaponObj["maxDamage"]} @ {weaponObj["maxDamageRange"]}m\n{weaponObj["minDamage"]} @ {weaponObj["minDamageRange"]}m"""
+                    )
+                    if "pellets" in weaponObj:
+                        embed.add_field(name="Pellets", value=f'{weaponObj["pellets"]}')
+                        embed.add_field(name="Pellet spread", value=f'{weaponObj["pelletSpread"]}')
+
+            else:
+                embed.add_field(name="Damage", value=f'{weaponObj["maxDamage"]} @ {weaponObj["maxDamageRange"]}m\n{weaponObj["minDamage"]} @ {weaponObj["minDamageRange"]}m')
+                if "pellets" in weaponObj:
+                    embed.add_field(name="Pellets", value=f'{weaponObj["pellets"]}')
+                    embed.add_field(name="Pellet spread", value=f'{weaponObj["pelletSpread"]}')
+
+        if "maxIndirectDamage" in weaponObj and "directDamage" in weaponObj:
+            if weaponObj["maxIndirectDamage"] != 0:
+                embed.add_field(name="Direct damage", value=f"{weaponObj['directDamage']}")
+                embed.add_field(
+                    name="Indirect damage",
+                    value=f"""{weaponObj["maxIndirectDamage"]} @ {weaponObj["maxIndirectDamageRadius"]}m\n{weaponObj["minIndirectDamage"]} @ {weaponObj["minIndirectDamageRadius"]}m"""
+                )
+            else:
+                embed.add_field(name="Damage", value=f"{weaponObj['directDamage']}")
+
+        if "maxIndirectDamage" in weaponObj:
+            embed.add_field(
+                name="Indirect damage",
+                value=f"""{weaponObj["maxIndirectDamage"]} @ {weaponObj["maxIndirectDamageRadius"]}m\n{weaponObj["minIndirectDamage"]} @ {weaponObj["minIndirectDamageRadius"]}m"""
+            )
+
+        if "speed" in weaponObj:
+            embed.add_field(
+                name="Muzzle Velocity",
+                value="{} m/s".format(weaponObj["speed"])
+            )
+
+        if "adsCofRecoil" in weaponObj and "hipCofRecoil" in weaponObj and "verticalRecoil" in weaponObj:
+            embed.add_field(
+                name="Muzzle Velocity",
+                value="{} m/s".format(weaponObj["speed"])
+            )
+
+        await interaction.response.send_message(embed=embed)
+        return
+        if "category" in weaponObj:
+            embed.add_field(name="", value="")
+        if "category" in weaponObj:
+            embed.add_field(name="", value="")
+
+    @weapon.autocomplete('weapon')
+    async def weapon_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        if current == "":
+            return [app_commands.Choice(name=x, value=str(y)) for y, x in WEAPON_NAMES.items()][:25]
+
+        return [app_commands.Choice(name=x, value=str(y)) for y, x in WEAPON_NAMES.items() if current.lower() in x.lower()][:25]
