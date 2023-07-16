@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from time import time
+import logging
 
 import aiohttp
 import discord
@@ -56,7 +57,8 @@ class Planetside(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(url=f"{self.honuUrl}/api/characters/search/{username}?censusTimeout=true") as response:
                 if response.status != 200:
-                    raise Exception(f"Got some wacky error from honu: {response.status}")
+                    logging.info("Honu failed to respond. Code:", response.status, "Content:", await response.text())
+                    return None
 
                 responseJson = await response.json()
 
@@ -74,32 +76,43 @@ class Planetside(commands.Cog):
                     if x["name"].lower() == username:
                         char.characterID = x["id"]
 
-            # @TODO Make happen all at the same time not one by one
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}") as response:
-                if response.status == 200:
+            tasks = [
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}"),
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/stats"),
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/history_stats"),
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/honu-data"),
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/metadata"),
+                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/weapon_stats")
+            ]
+
+            responses = await asyncio.gather(*tasks)
+
+            for response in responses:
+                if response.status != 200:
+                    continue
+
+                endpoint = response.url.path
+
+                if endpoint == f"/api/character/{char.characterID}":
                     char.character = await response.json()
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/stats") as response:
-                if response.status == 200:
+                elif endpoint == f"/api/character/{char.characterID}/stats":
                     char.stats = await response.json()
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/history_stats") as response:
-                if response.status == 200:
+                elif endpoint == f"/api/character/{char.characterID}/history_stats":
                     char.hist = await response.json()
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/honu-data") as response:
-                if response.status == 200:
+                elif endpoint == f"/api/character/{char.characterID}/honu-data":
                     char.honuData = await response.json()
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/metadata") as response:
-                if response.status == 200:
+                elif endpoint == f"/api/character/{char.characterID}/metadata":
                     char.honuMeta = await response.json()
-            async with session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/weapon_stats") as response:
-                if response.status == 200:
+                elif endpoint == f"/api/character/{char.characterID}/weapon_stats":
                     char.weaponStats = await response.json()
+
         return char
 
     @app_commands.command()
     @app_commands.describe(username="Look up a player's stats.")
     async def stats(self, interaction: discord.Interaction, username: str):
         """
-            Get stats for a planetside player
+            Get stats for a PlanetSide player.
         """
         # Using defer because census responses are sometimes slow
         await interaction.response.defer(thinking=True)
@@ -143,6 +156,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
             color=factionColor
         )
 
+        if char.honuMeta["notFoundCount"] > 0:
+            embed.add_field(name="Character possibly Deleted", value="This character exists in Honu's database, but not in the Planetside 2 API. Missed {} times".format(char.honuMeta["notFoundCount"]), inline=False)
+
         if char.character["outfitTag"] is not None:
             embed.add_field(name='Outfit', value=f"[{char.character['outfitTag']}] {char.character['outfitName']}", inline=False)
 
@@ -177,9 +193,18 @@ Battle rank {char.character['battleRank']}{prestige}""",
         mostKillsWeaponKills = 0
         mostKillsWeaponID = 0
         for weapon in char.weaponStats:
-            if mostKillsWeaponKills <= weapon["stat"]["kills"]:
-                mostKillsWeaponKills = weapon["stat"]["kills"]
-                mostKillsWeaponID = int(weapon["itemID"])
+            if weapon["stat"]["vehicleID"] == 0:
+                if mostKillsWeaponKills <= weapon["stat"]["kills"]:
+                    mostKillsWeaponKills = weapon["stat"]["kills"]
+                    mostKillsWeaponID = int(weapon["itemID"])
+
+        mostUsedVehicle = ""
+        mostUsedVehicleTime = 0
+        for x in char.weaponStats:
+            if x["stat"]["vehicleID"] != 0:
+                if mostUsedVehicleTime <= x["stat"]["secondsWith"]:
+                    mostUsedVehicle = x["vehicle"]["name"]
+                    mostUsedVehicleTime = x["stat"]["secondsWith"]
 
         embed.add_field(name="K-D ", value=f'{"{:,}".format(totalKills)} - {"{:,}".format(totalDeaths)} = {"{:,}".format(totalKills - totalDeaths)}')
         embed.add_field(name="KDR", value=f"{round(await self.division(totalKills, totalDeaths), 2)}")
@@ -199,17 +224,56 @@ Battle rank {char.character['battleRank']}{prestige}""",
         embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%d %H:%M:%SZ').strftime('%s')}:D>")
 
         if mostPlayedClass != 0:
-            embed.add_field(name="Most played class", value=f"**{CLASSES[mostPlayedClass]}** {int(mostPlayedTime / 60 // 60)} Hours, {mostPlayedTime // 60 % 60} Minutes")
+            embed.add_field(name="Most played class", value=f"**{CLASSES[mostPlayedClass]}** ({int(mostPlayedTime / 60 // 60)}h, {mostPlayedTime // 60 % 60}m) [{round((mostPlayedTime / totalPlayTime) * 100, 1)}%]")
 
+        if mostUsedVehicleTime != 0:
+            embed.add_field(
+                name="Most used vehicle",
+                value=f"{mostUsedVehicle} ({int(mostUsedVehicleTime / 60 // 60)}h, {mostUsedVehicleTime // 60 % 60}m)"
+            )
         embed.set_footer(text=f"Process time: {round(time() - startTime, 2)} seconds.", icon_url="https://cdn.tims.host/2/ucsQnspf70JR7FQ.png")
 
         await interaction.edit_original_response(embed=embed)
+
+    @stats.autocomplete("username")
+    async def username_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """
+            Autocomplete username results are from honu's character search.
+        """
+        if len(current) <= 3:
+            return []
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=f"{self.honuUrl}/api/characters/search/{current}?censusTimeout=true") as response:
+                if response.status != 200:
+                    logging.info("Honu failed to respond. Code:", response.status, "Content:", await response.text())
+                    return []
+
+                responseJson = await response.json()
+
+        if len(responseJson) == 0:
+            return []
+
+        # Move exact match to the first place
+        for index, x in enumerate(responseJson):
+            if x["name"].lower() == current.lower():
+                responseJson.insert(0, responseJson.pop(index))
+
+        autocompleteList = []
+        for x in responseJson:
+            outfitTag = ""
+            if x["outfitTag"] is not None:
+                outfitTag = f"[{x['outfitTag']}] "
+
+            autocompleteList.append(app_commands.Choice(name=f'{outfitTag}{x["name"]}', value=x["name"]))
+
+        return autocompleteList[:25]
 
     @app_commands.command()
     @app_commands.describe(implant="Lookup an implant")
     async def implant(self, interaction: discord.Interaction, implant: str):
         """
-            Search up an Implant
+            Look up an implant and its stats.
         """
         if implant not in IMPLANTS:
             searchQuery = [x for x in IMPLANTS.keys() if implant.lower() in x.lower()]
@@ -254,7 +318,7 @@ Battle rank {char.character['battleRank']}{prestige}""",
     @app_commands.describe(weapon="Lookup an weapon")
     async def weapon(self, interaction: discord.Interaction, weapon: str):
         """
-            Search up a Weapon
+            Look up a weapon and its stats.
         """
         try:
             weaponObj = WEAPONS[int(weapon)]
@@ -305,8 +369,7 @@ Battle rank {char.character['battleRank']}{prestige}""",
             if "ammo" in weaponObj:
                 embed.add_field(
                     name="Ammo",
-                    value=f"""Magazine: {weaponObj["clip"]}
-Capacity: {weaponObj["ammo"]}
+                    value=f"""Magazine: {weaponObj["clip"]}\nCapacity: {weaponObj["ammo"]}
                     """
                 )
             else:
@@ -319,8 +382,7 @@ Capacity: {weaponObj["ammo"]}
                 if "chamber" in weaponObj:
                     embed.add_field(
                         name="Reload",
-                        value=f"""Short: {weaponObj["reload"]/1000} s
-Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
+                        value=f"""Short: {weaponObj["reload"]/1000} s\nLong: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
                         """
                     )
                 else:
@@ -391,6 +453,11 @@ Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
                     name="Vertical Recoil",
                     value="{}".format(weaponObj["verticalRecoil"])
                 )
+                if "recoilAngleMin" in weaponObj and "recoilAngleMax" in weaponObj:
+                    embed.add_field(
+                        name="Recoil Angle (Min/Max)",
+                        value="{}/{}".format(weaponObj["recoilAngleMin"], weaponObj["recoilAngleMax"])
+                    )
 
         if "recoilHorizontalMin" in weaponObj and "recoilHorizontalMax" in weaponObj:
             embed.add_field(
@@ -487,8 +554,14 @@ Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
                 adsCOFMax[4] = weaponObj["fallingCofMaxADS"]
 
             if "crouchWalkingCofMinADS" in weaponObj:
-                adsCOFMin[5] = weaponObj["standingCofMinADS"]
-                adsCOFMax[5] = weaponObj["standingCofMaxADS"]
+                adsCOFMin[5] = weaponObj["crouchWalkingCofMinADS"]
+                adsCOFMax[5] = weaponObj["crouchWalkingCofMaxADS"]
+
+        # Convert everything to string so .join() plays nice
+        hipCOFMin = [str(x) for x in hipCOFMin]
+        hipCOFMax = [str(x) for x in hipCOFMax]
+        adsCOFMin = [str(x) for x in adsCOFMin]
+        adsCOFMax = [str(x) for x in adsCOFMax]
 
         if "useInWater" in weaponObj:
             if weaponObj["useInWater"]:
@@ -505,19 +578,54 @@ Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
         if CofUpdated(hipCOFMin) or CofUpdated(adsCOFMin):
             if not StandingOnly(hipCOFMin) or not StandingOnly(adsCOFMin):
                 embed.add_field(
-                    name="*CoF shown Stand/Crouch/Walk/Sprint/Fall/Crouch Walk*",
-                    value=""
+                    name="**―――――――――――――――――――**",
+                    value="**CoF shown Stand/Crouch/Walk/Sprint/Fall/Crouch Walk**",
+                    inline=False
                 )
-        
+
         if CofUpdated(hipCOFMin):
             if StandingOnly(hipCOFMin):
                 embed.add_field(
                     name="Hipfire CoF Min",
-                    value=hipCOFMin
+                    value=hipCOFMin[0]
                 )
                 embed.add_field(
-                    name="Hipfire CoF Max"
+                    name="Hipfire CoF Max",
+                    value=hipCOFMax[0]
                 )
+                embed.add_field(name="\u200b", value="\u200b")
+            else:
+                embed.add_field(
+                    name="Hipfire CoF Min",
+                    value="/".join(hipCOFMin)
+                )
+                embed.add_field(
+                    name="Hipfire CoF Max",
+                    value="/".join(hipCOFMax)
+                )
+                embed.add_field(name="\u200b", value="\u200b")
+
+        if CofUpdated(adsCOFMin):
+            if StandingOnly(adsCOFMin):
+                embed.add_field(
+                    name="ADS CoF Min",
+                    value=adsCOFMin[0]
+                )
+                embed.add_field(
+                    name="ADS CoF Max",
+                    value=adsCOFMax[0]
+                )
+                embed.add_field(name="\u200b", value="\u200b")
+            else:
+                embed.add_field(
+                    name="ADS CoF Min",
+                    value="/".join(adsCOFMin)
+                )
+                embed.add_field(
+                    name="ADS CoF Max",
+                    value="/".join(adsCOFMax)
+                )
+                embed.add_field(name="\u200b", value="\u200b")
 
         await interaction.response.send_message(embed=embed)
 
