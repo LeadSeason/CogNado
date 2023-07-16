@@ -22,6 +22,14 @@ class Player():
         self.weaponStats = dict()
 
 
+def CofUpdated(CoF):
+    return CoF != ['?', '?', '?', '?', '?', '?']
+
+
+def StandingOnly(CoF):
+    return CoF[0] != "?" and CoF[1] == "?" and CoF[2] == "?" and CoF[3] == "?" and CoF[4] == "?" and CoF[5] == "?"
+
+
 class Planetside(commands.Cog):
     """
         Planetside Cog. Contains command for the game Planetside 2.
@@ -200,6 +208,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
     @app_commands.command()
     @app_commands.describe(implant="Lookup an implant")
     async def implant(self, interaction: discord.Interaction, implant: str):
+        """
+            Search up an Implant
+        """
         if implant not in IMPLANTS:
             searchQuery = [x for x in IMPLANTS.keys() if implant.lower() in x.lower()]
             if 0 >= len(searchQuery):
@@ -242,6 +253,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
     @app_commands.command()
     @app_commands.describe(weapon="Lookup an weapon")
     async def weapon(self, interaction: discord.Interaction, weapon: str):
+        """
+            Search up a Weapon
+        """
         try:
             weaponObj = WEAPONS[int(weapon)]
         except ValueError:
@@ -348,7 +362,7 @@ Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
             else:
                 embed.add_field(name="Damage", value=f"{weaponObj['directDamage']}")
 
-        if "maxIndirectDamage" in weaponObj:
+        elif "maxIndirectDamage" in weaponObj:
             embed.add_field(
                 name="Indirect damage",
                 value=f"""{weaponObj["maxIndirectDamage"]} @ {weaponObj["maxIndirectDamageRadius"]}m\n{weaponObj["minIndirectDamage"]} @ {weaponObj["minIndirectDamageRadius"]}m"""
@@ -362,16 +376,150 @@ Long: {(weaponObj["reload"] + weaponObj["chamber"])/1000} s
 
         if "adsCofRecoil" in weaponObj and "hipCofRecoil" in weaponObj and "verticalRecoil" in weaponObj:
             embed.add_field(
-                name="Muzzle Velocity",
-                value="{} m/s".format(weaponObj["speed"])
+                name="Bloom (hip/ADS)",
+                value="{}/{}".format(weaponObj["hipCofRecoil"], weaponObj["adsCofRecoil"])
+            )
+        elif "hipCofRecoil" in weaponObj and "verticalRecoil" in weaponObj:
+            embed.add_field(
+                name="Bloom (hip)",
+                value="{}".format(weaponObj["hipCofRecoil"])
             )
 
+        if "verticalRecoil" in weaponObj:
+            if weaponObj["verticalRecoil"] != 0:
+                embed.add_field(
+                    name="Vertical Recoil",
+                    value="{}".format(weaponObj["verticalRecoil"])
+                )
+
+        if "recoilHorizontalMin" in weaponObj and "recoilHorizontalMax" in weaponObj:
+            embed.add_field(
+                name="Horizontal Recoil (min/max)",
+                value="{}/{}".format(weaponObj["recoilHorizontalMin"], weaponObj["recoilHorizontalMax"])
+            )
+
+        if "recoilHorizontalTolerance" in weaponObj:
+            embed.add_field(
+                name="Horizontal Tolerance",
+                value="{}".format(weaponObj["recoilHorizontalTolerance"])
+            )
+
+        if "firstShotMultiplier" in weaponObj:
+            embed.add_field(
+                name="First Shot Multiplier",
+                value="{}".format(weaponObj["firstShotMultiplier"])
+            )
+
+        if "fireModes" in weaponObj:
+            if len(weaponObj["fireModes"]) != 0:
+                embed.add_field(
+                    name="Fire Modes",
+                    value="\n".join(weaponObj["fireModes"])
+                )
+
+        if "headshotMultiplier" in weaponObj:
+            embed.add_field(
+                name="Headshot Multiplier",
+                value="{}x".format(
+                    int(weaponObj["headshotMultiplier"]) + 1
+                )
+            )
+
+        if "defZoom" in weaponObj:
+            if weaponObj["defZoom"] != 1:
+                embed.add_field(
+                    name="Iron Sight Zoom",
+                    value="{}x".format(weaponObj["defZoom"])
+                )
+
+        hipCOFMin = ["?", "?", "?", "?", "?", "?"]
+        hipCOFMax = ["?", "?", "?", "?", "?", "?"]
+        adsCOFMin = ["?", "?", "?", "?", "?", "?"]
+        adsCOFMax = ["?", "?", "?", "?", "?", "?"]
+
+        if "standingCofMin" in weaponObj:
+            hipCOFMin[0] = weaponObj["standingCofMin"]
+            hipCOFMax[0] = weaponObj["standingCofMax"]
+
+        if "crouchingCofMin" in weaponObj:
+            hipCOFMin[1] = weaponObj["crouchingCofMin"]
+            hipCOFMax[1] = weaponObj["crouchingCofMax"]
+
+        if "runningCofMin" in weaponObj:
+            hipCOFMin[2] = weaponObj["runningCofMin"]
+            hipCOFMax[2] = weaponObj["runningCofMax"]
+
+        if "sprintingCofMin" in weaponObj:
+            hipCOFMin[3] = weaponObj["sprintingCofMin"]
+            hipCOFMax[3] = weaponObj["sprintingCofMax"]
+
+        if "fallingCofMin" in weaponObj:
+            hipCOFMin[4] = weaponObj["fallingCofMin"]
+            hipCOFMax[4] = weaponObj["fallingCofMax"]
+
+        if "crouchWalkingCofMin" in weaponObj:
+            hipCOFMin[5] = weaponObj["crouchWalkingCofMin"]
+            hipCOFMax[5] = weaponObj["crouchWalkingCofMax"]
+
+        if "adsMoveSpeed" in weaponObj:
+            embed.add_field(
+                name="ADS Move Speed",
+                value="{}x".format(weaponObj["adsMoveSpeed"])
+            )
+            if "standingCofMinADS" in weaponObj:
+                adsCOFMin[0] = weaponObj["standingCofMinADS"]
+                adsCOFMax[0] = weaponObj["standingCofMaxADS"]
+
+            if "crouchingCofMinADS" in weaponObj:
+                adsCOFMin[1] = weaponObj["crouchingCofMinADS"]
+                adsCOFMax[1] = weaponObj["crouchingCofMaxADS"]
+
+            if "runningCofMinADS" in weaponObj:
+                adsCOFMin[2] = weaponObj["runningCofMinADS"]
+                adsCOFMax[2] = weaponObj["runningCofMaxADS"]
+
+            if "sprintingCofMinADS" in weaponObj:
+                adsCOFMin[3] = weaponObj["sprintingCofMinADS"]
+                adsCOFMax[3] = weaponObj["sprintingCofMaxADS"]
+
+            if "fallingCofMinADS" in weaponObj:
+                adsCOFMin[4] = weaponObj["fallingCofMinADS"]
+                adsCOFMax[4] = weaponObj["fallingCofMaxADS"]
+
+            if "crouchWalkingCofMinADS" in weaponObj:
+                adsCOFMin[5] = weaponObj["standingCofMinADS"]
+                adsCOFMax[5] = weaponObj["standingCofMaxADS"]
+
+        if "useInWater" in weaponObj:
+            if weaponObj["useInWater"]:
+                embed.add_field(
+                    name="Usable Underwater",
+                    value="Yes"
+                )
+            else:
+                embed.add_field(
+                    name="Usable Underwater",
+                    value="No"
+                )
+
+        if CofUpdated(hipCOFMin) or CofUpdated(adsCOFMin):
+            if not StandingOnly(hipCOFMin) or not StandingOnly(adsCOFMin):
+                embed.add_field(
+                    name="*CoF shown Stand/Crouch/Walk/Sprint/Fall/Crouch Walk*",
+                    value=""
+                )
+        
+        if CofUpdated(hipCOFMin):
+            if StandingOnly(hipCOFMin):
+                embed.add_field(
+                    name="Hipfire CoF Min",
+                    value=hipCOFMin
+                )
+                embed.add_field(
+                    name="Hipfire CoF Max"
+                )
+
         await interaction.response.send_message(embed=embed)
-        return
-        if "category" in weaponObj:
-            embed.add_field(name="", value="")
-        if "category" in weaponObj:
-            embed.add_field(name="", value="")
 
     @weapon.autocomplete('weapon')
     async def weapon_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
