@@ -156,8 +156,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
             color=factionColor
         )
 
-        if char.honuMeta["notFoundCount"] > 0:
-            embed.add_field(name="Character possibly Deleted", value="This character exists in Honu's database, but not in the Planetside 2 API. Missed {} times".format(char.honuMeta["notFoundCount"]), inline=False)
+        if "notFoundCount" in char.honuMeta:
+            if char.honuMeta["notFoundCount"] > 0:
+                embed.add_field(name="Character possibly Deleted", value="This character exists in Honu's database, but not in the Planetside 2 API. Missed {} times".format(char.honuMeta["notFoundCount"]), inline=False)
 
         if char.character["outfitTag"] is not None:
             embed.add_field(name='Outfit', value=f"[{char.character['outfitTag']}] {char.character['outfitName']}", inline=False)
