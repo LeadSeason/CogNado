@@ -46,6 +46,13 @@ class Planetside(commands.Cog):
             serviceId=False
         )
 
+        default_guild = {
+            "defaultServer": 0,
+            "defaultOutfit": 0
+        }
+
+        self.config.register_guild(**default_guild)
+
     async def division(self, a, b):
         return a / b if b else 0
 
@@ -636,3 +643,18 @@ Battle rank {char.character['battleRank']}{prestige}""",
             return [app_commands.Choice(name=x, value=str(y)) for y, x in WEAPON_NAMES.items()][:25]
 
         return [app_commands.Choice(name=x, value=str(y)) for y, x in WEAPON_NAMES.items() if current.lower() in x.lower()][:25]
+
+    @app_commands.command()
+    @app_commands.describe(server="Specify a server")
+    async def alerts(self, interaction: discord.Interaction, server: str = None):
+        """
+            Look up current alerts
+        """
+        pass
+
+    @alerts.autocomplete('server')
+    async def server_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        if current == "":
+            return [app_commands.Choice(name=x, value=x) for x in IMPLANTS.keys()][:25]
+
+        return [app_commands.Choice(name=x, value=x) for x in IMPLANTS.keys() if current.lower() in x.lower()][:25]
