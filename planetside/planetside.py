@@ -1,6 +1,6 @@
 import asyncio
-from datetime import datetime
-from time import time
+from dateutil import parser as date_parser 
+from time import time, mktime
 import logging
 
 import aiohttp
@@ -227,11 +227,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
         if "online" in char.honuData:
             if not char.honuData["online"]:
                 embed.add_field(name='Last logon', value=f"<t:{char.honuData['latestEventTimestamp'] // 1000}:R>")
-        try:
-            embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%d %H:%M:%SZ').strftime('%s')}:D>")
-        except Exception:
-            embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%dT%H:%M:%SZ').strftime('%s')}:D>")
-
+        
+        player_creation_datetime = date_parser.parse(char.character['dateCreated'])
+        embed.add_field(name="Player creation", value=f"<t:{round(mktime(player_creation_datetime.timetuple()))}:D>")        
 
         if mostPlayedClass != 0:
             embed.add_field(name="Most played class", value=f"**{CLASSES[mostPlayedClass]}** ({int(mostPlayedTime / 60 // 60)}h, {mostPlayedTime // 60 % 60}m) [{round((mostPlayedTime / totalPlayTime) * 100, 1)}%]")
