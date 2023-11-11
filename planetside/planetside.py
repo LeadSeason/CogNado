@@ -156,8 +156,9 @@ Battle rank {char.character['battleRank']}{prestige}""",
             color=factionColor
         )
 
-        if char.honuMeta["notFoundCount"] > 0:
-            embed.add_field(name="Character possibly Deleted", value="This character exists in Honu's database, but not in the Planetside 2 API. Missed {} times".format(char.honuMeta["notFoundCount"]), inline=False)
+        if "notFoundCount" in char.honuMeta:
+            if char.honuMeta["notFoundCount"] > 0:
+                embed.add_field(name="Character possibly Deleted", value="This character exists in Honu's database, but not in the Planetside 2 API. Missed {} times".format(char.honuMeta["notFoundCount"]), inline=False)
 
         if char.character["outfitTag"] is not None:
             embed.add_field(name='Outfit', value=f"[{char.character['outfitTag']}] {char.character['outfitName']}", inline=False)
@@ -221,7 +222,11 @@ Battle rank {char.character['battleRank']}{prestige}""",
         if "online" in char.honuData:
             if not char.honuData["online"]:
                 embed.add_field(name='Last logon', value=f"<t:{char.honuData['latestEventTimestamp'] // 1000}:R>")
-        embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%d %H:%M:%SZ').strftime('%s')}:D>")
+        try:
+            embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%d %H:%M:%SZ').strftime('%s')}:D>")
+        except Exception:
+            embed.add_field(name="Player creation", value=f"<t:{datetime.strptime(char.character['dateCreated'], '%Y-%m-%dT%H:%M:%SZ').strftime('%s')}:D>")
+
 
         if mostPlayedClass != 0:
             embed.add_field(name="Most played class", value=f"**{CLASSES[mostPlayedClass]}** ({int(mostPlayedTime / 60 // 60)}h, {mostPlayedTime // 60 % 60}m) [{round((mostPlayedTime / totalPlayTime) * 100, 1)}%]")
