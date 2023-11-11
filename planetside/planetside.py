@@ -88,6 +88,11 @@ class Planetside(commands.Cog):
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
             for response in responses:
+                # Because return_exceptions we have to 
+                # check that the reponse hasnt failed
+                if not hasattr(response, 'status'):
+                    continue
+
                 if response.status != 200:
                     continue
 
