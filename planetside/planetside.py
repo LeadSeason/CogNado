@@ -77,12 +77,12 @@ class Planetside(commands.Cog):
                         char.characterID = x["id"]
 
             tasks = [
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}"),
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/stats"),
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/history_stats"),
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/honu-data"),
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/metadata"),
-                session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/weapon_stats")
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}")),
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/stats")),
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/history_stats")),
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/honu-data")),
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/metadata")),
+                asyncio.create_task(session.get(url=f"{self.honuUrl}/api/character/{char.characterID}/weapon_stats"))
             ]
 
             responses = await asyncio.gather(*tasks)
